@@ -52,7 +52,7 @@ export default function OrdersPage() {
           <tr>
             <th className="p-2">Client</th>
             <th className="p-2">Item</th>
-            <th className="p-2">Qty</th>
+            <th className="p-2">Quantity</th>
             <th className="p-2">Total</th>
             <th className="p-2">Date</th>
           </tr>
