@@ -1,20 +1,16 @@
-import { NextResponse } from "next/server";
-
-export async function POST(req: Request) {
-  const { query } = await req.json();
-
-  const res = await fetch("https://api.openai.com/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
-    },
-    body: JSON.stringify({
-      model: "gpt-4o-mini",
-      messages: [{ role: "user", content: query }],
-    }),
-  });
+async function fetchInsights(filteredOrders: any[], query: string) {
+  const res = await fetch(
+    `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/ai-insights`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}`,
+      },
+      body: JSON.stringify({ query, orders: filteredOrders }),
+    }
+  );
 
   const data = await res.json();
-  return NextResponse.json(data);
+  return data.choices?.[0]?.message?.content || "No insights available.";
 }

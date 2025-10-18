@@ -1,0 +1,100 @@
+// src/components/AIInsightsPanel.tsx
+"use client";
+import { useEffect, useState } from "react";
+
+type Rec = {
+  beverage_id: number;
+  name: string;
+  category: string;
+  current_qty: number;
+  threshold: number;
+  avg_daily_sales: number;
+  suggested_reorder_qty: number;
+};
+
+export default function AIInsightsPanel({ params }: { params?: any }) {
+  const [loading, setLoading] = useState(false);
+  const [recs, setRecs] = useState<Rec[]>([]);
+  const [forecast, setForecast] = useState<any[]>([]);
+  const [aiText, setAiText] = useState<string>("");
+
+  async function load() {
+    setLoading(true);
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/ai-insights`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}`,
+        },
+        body: JSON.stringify({ mode: "panel", params }),
+      });
+      const data = await res.json();
+      setRecs(data.recommendations || []);
+      setForecast(data.forecast || []);
+      setAiText(data.ai_text || (data.ai_json ? JSON.stringify(data.ai_json, null, 2) : ""));
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => { load(); }, []);
+
+  async function applyReorder(rec: Rec) {
+    // placeholder: you can implement an API to create supplier order or create an "orders" row
+    const confirm = window.confirm(`Create reorder for ${rec.name}? Qty: ${rec.suggested_reorder_qty}`);
+    if (!confirm) return;
+    // Example: create a purchase order row via supabase client in frontend (or call serverless API)
+    alert("✅ Reorder action triggered (implement server endpoint to actually do it).");
+  }
+
+  return (
+    <div className="bg-white p-4 rounded shadow">
+      <div className="flex items-center justify-between mb-3">
+        <h3 className="text-lg font-semibold">AI Insights & Recommendations</h3>
+        <button onClick={load} className="px-3 py-1 bg-gray-200 rounded">Refresh</button>
+      </div>
+
+      {loading && <p className="text-sm text-gray-500">Loading AI insights…</p>}
+
+      <section className="mb-4">
+        <h4 className="font-semibold">Recommended Reorders</h4>
+        {!recs.length && <p className="text-sm text-gray-500">No suggestions right now.</p>}
+        <ul className="mt-2 space-y-2">
+          {recs.map((r) => (
+            <li key={r.beverage_id} className="p-2 border rounded flex justify-between items-center">
+              <div>
+                <div className="font-medium">{r.name} <span className="text-sm text-gray-500">({r.category})</span></div>
+                <div className="text-sm text-gray-500">In stock: {r.current_qty} • Avg/day: {r.avg_daily_sales}</div>
+              </div>
+              <div className="text-right">
+                <div className="text-sm">Suggest: <strong>{r.suggested_reorder_qty}</strong></div>
+                <button onClick={() => applyReorder(r)} className="mt-2 px-3 py-1 bg-blue-600 text-white rounded text-sm">Reorder</button>
+              </div>
+            </li>
+          ))}
+        </ul>
+      </section>
+
+      <section className="mb-4">
+        <h4 className="font-semibold">Forecast (next 7 days for top items)</h4>
+        {forecast.length === 0 && <p className="text-sm text-gray-500">No forecast available.</p>}
+        <ul className="mt-2 space-y-2">
+          {forecast.map((f: any) => (
+            <li key={f.beverage_id} className="p-2 border rounded">
+              <div className="font-medium">{f.name}</div>
+              <div className="text-sm text-gray-500">Predicted next 7 days sales: {f.predicted_next_7_days} (avg {f.avgDaily}/day)</div>
+            </li>
+          ))}
+        </ul>
+      </section>
+
+      <section>
+        <h4 className="font-semibold">AI Summary</h4>
+        <pre className="text-sm p-2 bg-gray-50 rounded whitespace-pre-wrap">{aiText || "—"}</pre>
+      </section>
+    </div>
+  );
+}
